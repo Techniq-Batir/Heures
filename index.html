@@ -82,6 +82,10 @@
             const doc = new jsPDF({ orientation: "landscape", format: "a4" });
             
             doc.text("Fiche d'Heures Hebdomadaire", 10, 10);
+            doc.text(`Nom et Prénom: ${document.getElementById('name').value}`, 10, 20);
+            doc.text(`Date de réalisation: ${document.getElementById('date').value}`, 10, 30);
+            doc.text(`Semaine de travail: ${document.getElementById('week').value}`, 10, 40);
+            
             doc.autoTable({
                 head: [["Jour", "Réf Chantier", "Prépa (min)", "Arrivée", "Départ", "Pause (min)", "Transport", "Conducteur", "Repas", "Zone"]],
                 body: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'].map(day => [
@@ -96,11 +100,12 @@
                     document.getElementById('repas_' + day).value,
                     document.getElementById('zone_' + day).value
                 ]),
-                startY: 20
+                startY: 50
             });
-            doc.text(`Signature: ${document.getElementById('signature').value}`, 10, doc.lastAutoTable.finalY + 10);
+            doc.text(`Signature: ${document.getElementById('signature').value}`, 10, doc.autoTable.previous.finalY + 10);
             doc.save("Fiche_Heures.pdf");
         }
     </script>
 </body>
 </html>
+
