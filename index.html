@@ -16,10 +16,6 @@
         th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
         th { background-color: #007BFF; color: white; }
         input[type='text'], input[type='number'], input[type='time'], select { width: 100%; box-sizing: border-box; }
-        td:nth-child(2) input { width: 250px; } /* Élargir Réf Chantier */
-        td:nth-child(7) select { width: 100px; } /* Elargir transport */
-        td:nth-child(9) select, td:nth-child(10) select { width: 80px; } /* Élargir Repas et Zone */
-        td:nth-child(3), td:nth-child(6) input { width: 80px; } /* Ajuster les champs numériques */
         button { background-color: #007BFF; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; display: block; width: 100%; font-size: 16px; }
         button:hover { background-color: #0056b3; }
     </style>
@@ -29,13 +25,13 @@
         <h2>Fiche d'Heures Hebdomadaire</h2>
         <form id="timeSheetForm">
             <label>Nom et Prénom :</label>
-            <input type="text" name="name" required>
+            <input type="text" id="name" required>
             
             <label>Date de réalisation :</label>
-            <input type="date" name="date" required>
+            <input type="date" id="date" required>
             
             <label>Semaine de travail :</label>
-            <input type="week" name="week" required>
+            <input type="week" id="week" required>
             
             <table id="timeTable">
                 <thead>
@@ -58,31 +54,31 @@
                         days.forEach(day => {
                             document.write(`<tr>
                                 <td>${day}</td>
-                                <td><input type="text" name="chantier_${day}"></td>
-                                <td><input type="number" name="prepa_${day}" min="0"></td>
-                                <td><input type="time" name="arrivee_${day}"></td>
-                                <td><input type="time" name="depart_${day}"></td>
-                                <td><input type="number" name="pause_${day}" min="0"></td>
+                                <td><input type="text" id="chantier_${day}"></td>
+                                <td><input type="number" id="prepa_${day}" min="0"></td>
+                                <td><input type="time" id="arrivee_${day}"></td>
+                                <td><input type="time" id="depart_${day}"></td>
+                                <td><input type="number" id="pause_${day}" min="0"></td>
                                 <td>
-                                    <select name="transport_${day}">
+                                    <select id="transport_${day}">
                                         <option value="Entreprise">Entreprise</option>
                                         <option value="Personnel">Personnel</option>
                                     </select>
                                 </td>
                                 <td>
-                                    <select name="conducteur_${day}">
+                                    <select id="conducteur_${day}">
                                         <option value="Oui">Oui</option>
                                         <option value="Non">Non</option>
                                     </select>
                                 </td>
                                 <td>
-                                    <select name="repas_${day}">
+                                    <select id="repas_${day}">
                                         <option value="Panier">Panier</option>
                                         <option value="Restaurant">Restaurant</option>
                                     </select>
                                 </td>
                                 <td>
-                                    <select name="zone_${day}">
+                                    <select id="zone_${day}">
                                         ${[...Array(10).keys()].map(n => `<option value="${n+1}">${n+1}</option>`).join('')}
                                     </select>
                                 </td>
@@ -93,10 +89,36 @@
             </table>
             
             <label>Signature :</label>
-            <input type="text" name="signature" placeholder="Signer ici" required>
+            <input type="text" id="signature" placeholder="Signer ici" required>
             
-            <button type="button" onclick="generateAndSendPDF()"><i class="fas fa-paper-plane"></i> Soumettre</button>
+            <button type="button" onclick="generatePDF()"><i class="fas fa-paper-plane"></i> Soumettre</button>
         </form>
     </div>
+    
+    <script>
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.text("Fiche d'Heures Hebdomadaire", 10, 10);
+            doc.text(`Nom et Prénom: ${document.getElementById('name').value}`, 10, 20);
+            doc.text(`Date de réalisation: ${document.getElementById('date').value}`, 10, 30);
+            doc.text(`Semaine de travail: ${document.getElementById('week').value}`, 10, 40);
+            
+            let y = 50;
+            ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'].forEach(day => {
+                doc.text(`${day}: ${document.getElementById('chantier_' + day).value}, Prépa: ${document.getElementById('prepa_' + day).value} min, ` +
+                         `Arrivée: ${document.getElementById('arrivee_' + day).value}, Départ: ${document.getElementById('depart_' + day).value}, ` +
+                         `Pause: ${document.getElementById('pause_' + day).value} min, Transport: ${document.getElementById('transport_' + day).value}, ` +
+                         `Conducteur: ${document.getElementById('conducteur_' + day).value}, Repas: ${document.getElementById('repas_' + day).value}, ` +
+                         `Zone: ${document.getElementById('zone_' + day).value}`, 10, y);
+                y += 10;
+            });
+            
+            doc.text(`Signature: ${document.getElementById('signature').value}`, 10, y + 10);
+            
+            doc.save("Fiche_Heures.pdf");
+        }
+    </script>
 </body>
 </html>
