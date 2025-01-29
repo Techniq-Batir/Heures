@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiche d'Heures Hebdomadaire</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 1300px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        label { font-weight: bold; margin-top: 10px; display: block; }
+        input, select { padding: 8px; margin: 5px 0 15px; border-radius: 5px; border: 1px solid #ccc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background-color: #007BFF; color: white; }
+        input[type='text'], input[type='number'], input[type='time'], select { width: 100%; box-sizing: border-box; }
+        td:nth-child(2) input { width: 250px; } /* Élargir Réf Chantier */
+        td:nth-child(7) select { width: 100px; } /* Elargir transport */
+        td:nth-child(9) select, td:nth-child(10) select { width: 80px; } /* Élargir Repas et Zone */
+        td:nth-child(3), td:nth-child(6) input { width: 80px; } /* Ajuster les champs numériques */
+        button { background-color: #007BFF; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; display: block; width: 100%; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Fiche d'Heures Hebdomadaire</h2>
+        <form id="timeSheetForm">
+            <label>Nom et Prénom :</label>
+            <input type="text" name="name" required>
+            
+            <label>Date de réalisation :</label>
+            <input type="date" name="date" required>
+            
+            <label>Semaine de travail :</label>
+            <input type="week" name="week" required>
+            
+            <table id="timeTable">
+                <thead>
+                    <tr>
+                        <th>Jour</th>
+                        <th>Réf Chantier</th>
+                        <th>Préparation (min)</th>
+                        <th>Arrivée</th>
+                        <th>Départ</th>
+                        <th>Pause Midi (min)</th>
+                        <th>Transport</th>
+                        <th>Conducteur</th>
+                        <th>Repas</th>
+                        <th>Zone</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <script>
+                        let days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+                        days.forEach(day => {
+                            document.write(`<tr>
+                                <td>${day}</td>
+                                <td><input type="text" name="chantier_${day}"></td>
+                                <td><input type="number" name="prepa_${day}" min="0"></td>
+                                <td><input type="time" name="arrivee_${day}"></td>
+                                <td><input type="time" name="depart_${day}"></td>
+                                <td><input type="number" name="pause_${day}" min="0"></td>
+                                <td>
+                                    <select name="transport_${day}">
+                                        <option value="Entreprise">Entreprise</option>
+                                        <option value="Personnel">Personnel</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="conducteur_${day}">
+                                        <option value="Oui">Oui</option>
+                                        <option value="Non">Non</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="repas_${day}">
+                                        <option value="Panier">Panier</option>
+                                        <option value="Restaurant">Restaurant</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="zone_${day}">
+                                        ${[...Array(10).keys()].map(n => `<option value="${n+1}">${n+1}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>`);
+                        });
+                    </script>
+                </tbody>
+            </table>
+            
+            <label>Signature :</label>
+            <input type="text" name="signature" placeholder="Signer ici" required>
+            
+            <button type="button" onclick="generateAndSendPDF()"><i class="fas fa-paper-plane"></i> Soumettre</button>
+        </form>
+    </div>
+</body>
+</html>
