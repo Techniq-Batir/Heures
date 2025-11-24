@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relevé BTP - NAS</title>
+    <title>Relevé BTP - GitHub</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding-bottom: 140px; }
-        .header-app { background: linear-gradient(135deg, #0d6efd, #0a58ca); color: white; padding: 20px; border-radius: 0 0 20px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding-bottom: 100px; }
+        .header-app { background: linear-gradient(135deg, #24292f, #000000); color: white; padding: 20px; border-radius: 0 0 20px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .card-day { border: none; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; overflow: hidden; }
         .card-header { background: white; border-bottom: 1px solid #f0f0f0; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .card-header.active { background: #e7f1ff; color: #0d6efd; font-weight: bold; }
@@ -18,10 +18,8 @@
         #map { height: 400px; width: 100%; border-radius: 10px; }
         .signature-container { background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         canvas#sig-canvas { border: 2px dashed #ccc; border-radius: 10px; width: 100%; height: 200px; cursor: crosshair; background-color: #fffcf5; }
-        .fab-container { position: fixed; bottom: 0; left: 0; right: 0; padding: 15px; z-index: 1000; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; }
-        .btn-action { flex: 1; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 16px; border: none; display: flex; align-items: center; justify-content: center; gap: 10px;}
-        .btn-preview { background-color: #6c757d; color: white; }
-        .btn-email { background-color: #0d6efd; color: white; }
+        .fab-container { position: fixed; bottom: 0; left: 0; right: 0; padding: 15px; z-index: 1000; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        .btn-send { width: 100%; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 18px; border: none; background-color: #0d6efd; color: white; box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4); }
         .absence-wrapper { background-color: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ffeeba; }
         .hidden { display: none; }
     </style>
@@ -29,8 +27,8 @@
 <body>
 
 <div class="header-app text-center">
-    <h3><i class="fas fa-server me-2"></i>Fiche Semaine</h3>
-    <p class="m-0 opacity-75">Envoi auto via NAS</p>
+    <h3><i class="fab fa-github me-2"></i>Fiche Semaine</h3>
+    <p class="m-0 opacity-75">Envoi Auto (Sans PDF)</p>
 </div>
 
 <div class="container">
@@ -46,7 +44,9 @@
             </div>
         </div>
     </div>
+
     <form id="weekForm"><div id="daysContainer"></div></form>
+
     <div class="signature-container">
         <h5 class="text-primary"><i class="fas fa-pen-nib me-2"></i>Signature</h5>
         <p class="small text-muted">Je certifie l'exactitude des horaires.</p>
@@ -59,11 +59,8 @@
 </div>
 
 <div class="fab-container">
-    <button type="button" class="btn-action btn-preview" onclick="processPDF('preview')">
-        <i class="fas fa-eye"></i> Voir
-    </button>
-    <button type="button" class="btn-action btn-email" id="btnSend" onclick="processPDF('email')">
-        <i class="fas fa-paper-plane"></i> Envoyer
+    <button type="button" class="btn-send" id="btnSubmit" onclick="sendEmail()">
+        <i class="fas fa-paper-plane me-2"></i> Envoyer le Relevé
     </button>
 </div>
 
@@ -83,12 +80,21 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
 <script>
-    // --- CONFIGURATION LEFORT ---
+    // ============================================================
+    // ⚙️ VOS CLES EMAILJS (A REMPLACER ICI)
+    // ============================================================
+    const SERVICE_ID = "service_jdvgnv3";   // Remplacez par votre Service ID
+    const TEMPLATE_ID = "template_8uv2mtr"; // Remplacez par votre Template ID
+    const PUBLIC_KEY = "ZCTS4BK1SuysN0mOD";     // Remplacez par votre Public Key
+    // ============================================================
+    
     const ENTREPRISE_GPS = { lat: 49.74192, lng: 4.72918 }; 
+    
+    // Initialisation EmailJS
+    (function(){ emailjs.init(PUBLIC_KEY); })();
 
     const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
     const container = document.getElementById('daysContainer');
@@ -125,14 +131,13 @@
     const canvas = document.getElementById('sig-canvas'); const ctx = canvas.getContext('2d'); let isDrawing = false, hasSigned = false;
     function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio; ctx.scale(ratio, ratio); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000000'; }
     window.addEventListener("resize", resizeCanvas); setTimeout(resizeCanvas, 500);
-    function getPos(e) { const rect = canvas.getBoundingClientRect(); const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY; return { x: cx - rect.left, y: cy - rect.top }; }
-    function startDraw(e) { e.preventDefault(); isDrawing = true; hasSigned = true; const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); document.getElementById('sig-status').innerText = "Signature en cours..."; }
-    function draw(e) { if (!isDrawing) return; e.preventDefault(); const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); }
+    function startDraw(e) { e.preventDefault(); isDrawing = true; hasSigned = true; const rect = canvas.getBoundingClientRect(); const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY; ctx.beginPath(); ctx.moveTo(cx - rect.left, cy - rect.top); document.getElementById('sig-status').innerText = "Signature en cours..."; }
+    function draw(e) { if (!isDrawing) return; e.preventDefault(); const rect = canvas.getBoundingClientRect(); const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY; ctx.lineTo(cx - rect.left, cy - rect.top); ctx.stroke(); }
     function stopDraw() { if(isDrawing) { isDrawing = false; ctx.closePath(); document.getElementById('sig-status').innerText = "Signé ✅"; document.getElementById('sig-status').className = "small text-success fw-bold"; } }
     canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDraw); canvas.addEventListener('touchstart', startDraw, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDraw);
     window.clearSignature = function() { ctx.clearRect(0, 0, canvas.width, canvas.height); hasSigned = false; document.getElementById('sig-status').innerText = "En attente..."; document.getElementById('sig-status').className = "small text-muted"; }
 
-    // Map logic (simplifiée)
+    // Map & Utilitaires (Identiques versions précédentes)
     function initMap() { if(map) return; map = L.map('map').setView([ENTREPRISE_GPS.lat, ENTREPRISE_GPS.lng], 9); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map); L.marker([ENTREPRISE_GPS.lat, ENTREPRISE_GPS.lng]).addTo(map).bindPopup("🏢 Dépôt").openPopup(); map.on('click', function(e) { updateMarker(e.latlng); }); }
     function updateMarker(latlng) { if(marker) map.removeLayer(marker); marker = L.marker(latlng).addTo(map); const distKm = calculateDistance(ENTREPRISE_GPS.lat, ENTREPRISE_GPS.lng, latlng.lat, latlng.lng); const zone = getZoneFromDistance(distKm); document.getElementById('distanceDisplay').innerText = distKm.toFixed(1) + " km"; document.getElementById('zoneDisplay').innerText = "Zone " + zone; const addrDiv = document.getElementById('addressDisplay'); addrDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recherche...'; fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}`).then(r => r.json()).then(d => { let addr = d.display_name.split(',').slice(0,3).join(','); addrDiv.innerHTML = `<b>📍 ${addr}</b>`; document.getElementById('confirmZone').dataset.addr = addr; }).catch(e => { addrDiv.innerHTML = "GPS Seul"; document.getElementById('confirmZone').dataset.addr = "GPS: " + latlng.lat.toFixed(4) + ", " + latlng.lng.toFixed(4); }); const btn = document.getElementById('confirmZone'); btn.dataset.zone = zone; btn.dataset.dist = distKm.toFixed(1); }
     document.getElementById('confirmZone').addEventListener('click', function() { const d = this.dataset; const dayBlock = document.querySelectorAll('.card-day')[currentDayIndexForMap]; dayBlock.querySelector('[name="zone"]').value = d.zone; dayBlock.querySelector('[name="address_gps"]').value = d.addr || ""; dayBlock.querySelector('.zone-text').innerHTML = `<b>Zone ${d.zone}</b><br><small>${d.addr}</small>`; dayBlock.querySelector('.btn-map').classList.add('border-success'); dayBlock.querySelector('.btn-map').style.color = "#198754"; });
@@ -143,69 +148,78 @@
     function locateUser() { if (!navigator.geolocation) { alert("Pas de GPS"); return; } navigator.geolocation.getCurrentPosition((p) => { map.setView([p.coords.latitude, p.coords.longitude], 15); updateMarker({lat: p.coords.latitude, lng: p.coords.longitude}); }, () => alert("Erreur GPS")); }
     function openMap(index) { currentDayIndexForMap = index; const modal = new bootstrap.Modal(document.getElementById('mapModal')); modal.show(); setTimeout(() => { if(!map) initMap(); else map.invalidateSize(); }, 500); }
 
-    // --- LOGIQUE ENVOI SERVEUR ---
-    async function processPDF(action) {
-        const { jsPDF } = window.jspdf;
+    // ============================================================
+    // 🚀 FONCTION ENVOI EMAIL (VIA EMAILJS)
+    // ============================================================
+    function sendEmail() {
         const worker = document.getElementById('workerName').value;
         const week = document.getElementById('weekStart').value;
+
         if(!worker || !week) { alert("Nom et Date manquants !"); return; }
-        if(action === 'email' && !hasSigned) { alert("✍️ Signez avant d'envoyer."); return; }
+        if(!hasSigned) { alert("✍️ Veuillez signer en bas de page."); document.querySelector('.signature-container').scrollIntoView(); return; }
 
-        const doc = new jsPDF({ orientation: 'landscape' });
-        doc.setFontSize(18); doc.text("RELEVÉ D'HEURES HEBDOMADAIRE", 14, 15);
-        doc.setFontSize(12); doc.text("Ouvrier : " + worker, 14, 25); doc.text("Semaine du : " + week, 14, 32);
+        const btn = document.getElementById('btnSubmit');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi en cours...'; btn.disabled = true;
 
-        let rows = [];
+        // 1. Construction du tableau HTML
+        let tableHTML = `
+        <table border="1" cellpadding="5" cellspacing="0" style="width:100%; border-collapse:collapse; font-family:Arial, sans-serif; font-size:12px;">
+            <tr style="background-color:#f2f2f2;">
+                <th>Jour</th><th>Chantier</th><th>Début</th><th>Fin</th><th>Repas</th><th>Zone</th><th>Adresse/Loc</th>
+            </tr>`;
+
         document.querySelectorAll('.card-day').forEach((block, index) => {
+            const day = block.dataset.day;
             const isAbsent = document.getElementById(`absentSwitch_${index}`).checked;
-            const dayName = block.dataset.day;
-            if (isAbsent) {
-                rows.push([dayName, { content: 'ABSENCE : ' + document.getElementById(`absentReason_${index}`).value, colSpan: 9, styles: { fillColor: [255, 235, 235], textColor: [200, 0, 0], fontStyle: 'bold' } }]);
+
+            if(isAbsent) {
+                const motif = document.getElementById(`absentReason_${index}`).value;
+                tableHTML += `<tr><td><b>${day}</b></td><td colspan="6" style="background-color:#ffe6e6; color:red;"><b>ABSENT : ${motif}</b></td></tr>`;
             } else {
-                const ch = block.querySelector('[name="chantier"]').value;
-                if(ch) {
-                    rows.push([dayName, ch, block.querySelector('[name="start"]').value, block.querySelector('[name="end"]').value, block.querySelector('[name="lunch_start"]').value, block.querySelector('[name="lunch_end"]').value, block.querySelector('[name="meal"]').value, "Z" + (block.querySelector('[name="zone"]').value||"?"), document.querySelector(`input[name="driver_${index}"]:checked`).value, block.querySelector('[name="address_gps"]').value]);
-                } else { rows.push([dayName, "", "", "", "", "", "", "", "", ""]); }
+                const chantier = block.querySelector('[name="chantier"]').value;
+                if(chantier) {
+                    const start = block.querySelector('[name="start"]').value;
+                    const end = block.querySelector('[name="end"]').value;
+                    const meal = block.querySelector('[name="meal"]').value;
+                    const zone = block.querySelector('[name="zone"]').value || "?";
+                    const addr = block.querySelector('[name="address_gps"]').value || "GPS";
+                    
+                    tableHTML += `
+                    <tr>
+                        <td><b>${day}</b></td>
+                        <td>${chantier}</td>
+                        <td>${start}</td>
+                        <td>${end}</td>
+                        <td>${meal}</td>
+                        <td>Z${zone}</td>
+                        <td><small>${addr}</small></td>
+                    </tr>`;
+                } else {
+                    tableHTML += `<tr><td>${day}</td><td colspan="6" style="color:#ccc;">-</td></tr>`;
+                }
             }
         });
+        tableHTML += `</table>`;
 
-        doc.autoTable({ head: [['Jour', 'Chantier', 'Deb.', 'Fin', 'P.Deb', 'P.Fin', 'Repas', 'Zone', 'Cond.', 'Localisation']], body: rows, startY: 40, theme: 'grid', styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [41, 128, 185] }, columnStyles: { 9: { cellWidth: 50 } } });
+        // 2. Préparation des données pour EmailJS
+        const templateParams = {
+            worker_name: worker,
+            week_date: week,
+            message_html: tableHTML,
+            signature_img: canvas.toDataURL('image/png'), // Envoi de la signature en image
+            sign_date: new Date().toLocaleString('fr-FR')
+        };
 
-        let finalY = doc.lastAutoTable.finalY + 10;
-        const now = new Date(); const timeString = now.toLocaleDateString('fr-FR') + " à " + now.toLocaleTimeString('fr-FR');
-        doc.setFontSize(10); doc.text("Certification :", 14, finalY);
-        doc.setFontSize(9); doc.setTextColor(100); doc.text("Signé le " + timeString, 14, finalY + 6);
-        if(hasSigned) { const sigData = canvas.toDataURL('image/png'); doc.addImage(sigData, 'PNG', 14, finalY + 10, 50, 25); }
-
-        if (action === 'preview') {
-            doc.save(`Apercu_${worker}.pdf`);
-        } else {
-            // ENVOI AU SERVEUR NAS
-            const btn = document.getElementById('btnSend');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi en cours...'; btn.disabled = true;
-
-            // Générer le PDF en Base64 string
-            const pdfBase64 = doc.output('datauristring');
-
-            fetch('envoi.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ worker: worker, week: week, pdf: pdfBase64 })
-            })
-            .then(response => {
-                if (response.ok) return response.text();
-                throw new Error('Erreur serveur');
-            })
-            .then(result => {
-                alert("✅ " + result);
+        // 3. Envoi
+        emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams)
+            .then(function() {
+                alert('✅ SUCCÈS ! Le relevé a été envoyé par mail au patron.');
                 btn.innerHTML = '<i class="fas fa-check"></i> Envoyé !';
-            })
-            .catch(error => {
-                console.error(error);
-                alert("❌ Erreur : Le mail n'est pas parti. Vérifiez que PHP est bien configuré sur le NAS.");
-                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Réessayer'; btn.disabled = false;
+            }, function(error) {
+                console.error('FAILED...', error);
+                alert('❌ ECHEC : ' + JSON.stringify(error));
+                btn.innerHTML = 'Réessayer'; btn.disabled = false;
             });
-        }
     }
     
     document.getElementById('weekStart').valueAsDate = new Date();
