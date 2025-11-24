@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relevé BTP - NAS</title>
+    <title>Relevé BTP - GitHub</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding-bottom: 140px; }
-        .header-app { background: linear-gradient(135deg, #0d6efd, #0a58ca); color: white; padding: 20px; border-radius: 0 0 20px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding-bottom: 100px; }
+        .header-app { background: linear-gradient(135deg, #24292f, #000000); color: white; padding: 20px; border-radius: 0 0 20px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .card-day { border: none; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; overflow: hidden; }
         .card-header { background: white; border-bottom: 1px solid #f0f0f0; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .card-header.active { background: #e7f1ff; color: #0d6efd; font-weight: bold; }
@@ -18,10 +18,10 @@
         #map { height: 400px; width: 100%; border-radius: 10px; }
         .signature-container { background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         canvas#sig-canvas { border: 2px dashed #ccc; border-radius: 10px; width: 100%; height: 200px; cursor: crosshair; background-color: #fffcf5; }
-        .fab-container { position: fixed; bottom: 0; left: 0; right: 0; padding: 15px; z-index: 1000; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; }
-        .btn-action { flex: 1; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 16px; border: none; display: flex; align-items: center; justify-content: center; gap: 10px;}
-        .btn-preview { background-color: #6c757d; color: white; }
-        .btn-email { background-color: #0d6efd; color: white; }
+        .fab-container { position: fixed; bottom: 0; left: 0; right: 0; padding: 15px; z-index: 1000; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; gap: 10px;}
+        .btn-action { flex:1; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; border: none; color: white; }
+        .btn-dl { background-color: #6c757d; }
+        .btn-send { background-color: #0d6efd; box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4); }
         .absence-wrapper { background-color: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ffeeba; }
         .hidden { display: none; }
     </style>
@@ -29,8 +29,8 @@
 <body>
 
 <div class="header-app text-center">
-    <h3><i class="fas fa-server me-2"></i>Fiche Semaine</h3>
-    <p class="m-0 opacity-75">Envoi auto via NAS</p>
+    <h3><i class="fab fa-github me-2"></i>Fiche Semaine</h3>
+    <p class="m-0 opacity-75">Rapport Email Certifié</p>
 </div>
 
 <div class="container">
@@ -46,7 +46,9 @@
             </div>
         </div>
     </div>
+
     <form id="weekForm"><div id="daysContainer"></div></form>
+
     <div class="signature-container">
         <h5 class="text-primary"><i class="fas fa-pen-nib me-2"></i>Signature</h5>
         <p class="small text-muted">Je certifie l'exactitude des horaires.</p>
@@ -59,10 +61,10 @@
 </div>
 
 <div class="fab-container">
-    <button type="button" class="btn-action btn-preview" onclick="processPDF('preview')">
-        <i class="fas fa-eye"></i> Voir
+    <button type="button" class="btn-action btn-dl" onclick="downloadPDF()">
+        <i class="fas fa-download"></i> Garder PDF
     </button>
-    <button type="button" class="btn-action btn-email" id="btnSend" onclick="processPDF('email')">
+    <button type="button" class="btn-action btn-send" id="btnSubmit" onclick="sendEmail()">
         <i class="fas fa-paper-plane"></i> Envoyer
     </button>
 </div>
@@ -85,16 +87,26 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
 <script>
-    // --- CONFIGURATION LEFORT ---
+    // ============================================================
+    // ⚙️ CONFIGURATION (A REMPLIR)
+    // ============================================================
+    const SERVICE_ID = "service_jdvgnv3";   // Votre ID EmailJS
+    const TEMPLATE_ID = "template_8uv2mtr"; // Votre ID Template
+    const PUBLIC_KEY = "ZCTS4BK1SuysN0mOD";     // Votre Clé Publique
     const ENTREPRISE_GPS = { lat: 49.74192, lng: 4.72918 }; 
+    // ============================================================
+    
+    (function(){ emailjs.init(PUBLIC_KEY); })();
 
     const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
     const container = document.getElementById('daysContainer');
     let currentDayIndexForMap = null;
     let map, marker;
 
+    // GENERATION FORMULAIRE
     days.forEach((day, index) => {
         const isFirst = index === 0;
         const html = `
@@ -110,7 +122,7 @@
                         ${!isFirst ? `<button type="button" class="btn btn-sm btn-outline-secondary w-100 mb-3" onclick="copyPrevious('${index}')"><i class="fas fa-copy me-1"></i> Copier hier</button>` : ''}
                         <label class="form-label">Chantier</label><input type="text" name="chantier" class="form-control" placeholder="Client / Ville">
                         <label class="form-label">Zone & Adresse</label><button type="button" class="btn-map" onclick="openMap(${index})"><i class="fas fa-map-marker-alt"></i> <span class="zone-text">Choisir sur la carte</span></button>
-                        <input type="hidden" name="zone" value=""><input type="hidden" name="address_gps" value="">
+                        <input type="hidden" name="zone" value=""><input type="hidden" name="address_gps" value=""><input type="hidden" name="lat" value=""><input type="hidden" name="lng" value="">
                         <div class="row mt-2"><div class="col-6"><label class="form-label">Embauche</label><input type="time" name="start" class="form-control"></div><div class="col-6"><label class="form-label">Fin</label><input type="time" name="end" class="form-control"></div></div>
                         <div class="row mt-2 bg-light p-2 rounded"><div class="col-6"><label class="form-label small">Deb. Pause</label><input type="time" name="lunch_start" class="form-control" value="12:00"></div><div class="col-6"><label class="form-label small">Fin Pause</label><input type="time" name="lunch_end" class="form-control" value="13:00"></div></div>
                         <div class="row mt-2"><div class="col-6"><label class="form-label">Repas</label><select name="meal" class="form-select"><option value="Panier">🧺 Panier</option><option value="Resto">🍽️ Resto</option></select></div><div class="col-6"><label class="form-label">Conducteur</label><div class="btn-group w-100" role="group"><input type="radio" class="btn-check" name="driver_${index}" id="dno_${index}" value="Non" checked><label class="btn btn-outline-secondary" for="dno_${index}">Non</label><input type="radio" class="btn-check" name="driver_${index}" id="dyes_${index}" value="Oui"><label class="btn btn-outline-primary" for="dyes_${index}">Oui</label></div></div></div>
@@ -125,89 +137,98 @@
     const canvas = document.getElementById('sig-canvas'); const ctx = canvas.getContext('2d'); let isDrawing = false, hasSigned = false;
     function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio; ctx.scale(ratio, ratio); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000000'; }
     window.addEventListener("resize", resizeCanvas); setTimeout(resizeCanvas, 500);
-    function getPos(e) { const rect = canvas.getBoundingClientRect(); const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY; return { x: cx - rect.left, y: cy - rect.top }; }
-    function startDraw(e) { e.preventDefault(); isDrawing = true; hasSigned = true; const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); document.getElementById('sig-status').innerText = "Signature en cours..."; }
-    function draw(e) { if (!isDrawing) return; e.preventDefault(); const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); }
+    function startDraw(e) { e.preventDefault(); isDrawing = true; hasSigned = true; const rect = canvas.getBoundingClientRect(); const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY; ctx.beginPath(); ctx.moveTo(cx - rect.left, cy - rect.top); document.getElementById('sig-status').innerText = "Signature en cours..."; }
+    function draw(e) { if (!isDrawing) return; e.preventDefault(); const rect = canvas.getBoundingClientRect(); const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY; ctx.lineTo(cx - rect.left, cy - rect.top); ctx.stroke(); }
     function stopDraw() { if(isDrawing) { isDrawing = false; ctx.closePath(); document.getElementById('sig-status').innerText = "Signé ✅"; document.getElementById('sig-status').className = "small text-success fw-bold"; } }
     canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDraw); canvas.addEventListener('touchstart', startDraw, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDraw);
     window.clearSignature = function() { ctx.clearRect(0, 0, canvas.width, canvas.height); hasSigned = false; document.getElementById('sig-status').innerText = "En attente..."; document.getElementById('sig-status').className = "small text-muted"; }
 
-    // Map logic (simplifiée)
+    // Map & Fonctions
     function initMap() { if(map) return; map = L.map('map').setView([ENTREPRISE_GPS.lat, ENTREPRISE_GPS.lng], 9); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map); L.marker([ENTREPRISE_GPS.lat, ENTREPRISE_GPS.lng]).addTo(map).bindPopup("🏢 Dépôt").openPopup(); map.on('click', function(e) { updateMarker(e.latlng); }); }
-    function updateMarker(latlng) { if(marker) map.removeLayer(marker); marker = L.marker(latlng).addTo(map); const distKm = calculateDistance(ENTREPRISE_GPS.lat, ENTREPRISE_GPS.lng, latlng.lat, latlng.lng); const zone = getZoneFromDistance(distKm); document.getElementById('distanceDisplay').innerText = distKm.toFixed(1) + " km"; document.getElementById('zoneDisplay').innerText = "Zone " + zone; const addrDiv = document.getElementById('addressDisplay'); addrDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recherche...'; fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}`).then(r => r.json()).then(d => { let addr = d.display_name.split(',').slice(0,3).join(','); addrDiv.innerHTML = `<b>📍 ${addr}</b>`; document.getElementById('confirmZone').dataset.addr = addr; }).catch(e => { addrDiv.innerHTML = "GPS Seul"; document.getElementById('confirmZone').dataset.addr = "GPS: " + latlng.lat.toFixed(4) + ", " + latlng.lng.toFixed(4); }); const btn = document.getElementById('confirmZone'); btn.dataset.zone = zone; btn.dataset.dist = distKm.toFixed(1); }
-    document.getElementById('confirmZone').addEventListener('click', function() { const d = this.dataset; const dayBlock = document.querySelectorAll('.card-day')[currentDayIndexForMap]; dayBlock.querySelector('[name="zone"]').value = d.zone; dayBlock.querySelector('[name="address_gps"]').value = d.addr || ""; dayBlock.querySelector('.zone-text').innerHTML = `<b>Zone ${d.zone}</b><br><small>${d.addr}</small>`; dayBlock.querySelector('.btn-map').classList.add('border-success'); dayBlock.querySelector('.btn-map').style.color = "#198754"; });
+    function updateMarker(latlng) { if(marker) map.removeLayer(marker); marker = L.marker(latlng).addTo(map); const distKm = calculateDistance(ENTREPRISE_GPS.lat, ENTREPRISE_GPS.lng, latlng.lat, latlng.lng); const zone = getZoneFromDistance(distKm); document.getElementById('distanceDisplay').innerText = distKm.toFixed(1) + " km"; document.getElementById('zoneDisplay').innerText = "Zone " + zone; const addrDiv = document.getElementById('addressDisplay'); addrDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recherche...'; fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}`).then(r => r.json()).then(d => { let addr = d.display_name.split(',').slice(0,3).join(','); addrDiv.innerHTML = `<b>📍 ${addr}</b>`; document.getElementById('confirmZone').dataset.addr = addr; }).catch(e => { addrDiv.innerHTML = "GPS Seul"; document.getElementById('confirmZone').dataset.addr = "GPS: " + latlng.lat.toFixed(4) + ", " + latlng.lng.toFixed(4); }); const btn = document.getElementById('confirmZone'); btn.dataset.zone = zone; btn.dataset.dist = distKm.toFixed(1); btn.dataset.lat = latlng.lat; btn.dataset.lng = latlng.lng;}
+    document.getElementById('confirmZone').addEventListener('click', function() { const d = this.dataset; const dayBlock = document.querySelectorAll('.card-day')[currentDayIndexForMap]; dayBlock.querySelector('[name="zone"]').value = d.zone; dayBlock.querySelector('[name="address_gps"]').value = d.addr || ""; dayBlock.querySelector('[name="lat"]').value = d.lat; dayBlock.querySelector('[name="lng"]').value = d.lng; dayBlock.querySelector('.zone-text').innerHTML = `<b>Zone ${d.zone}</b><br><small>${d.addr}</small>`; dayBlock.querySelector('.btn-map').classList.add('border-success'); dayBlock.querySelector('.btn-map').style.color = "#198754"; });
     function calculateDistance(lat1, lon1, lat2, lon2) { const R = 6371; const dLat = (lat2-lat1)*Math.PI/180; const dLon = (lon2-lon1)*Math.PI/180; const a = Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2); return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))); }
     function getZoneFromDistance(km) { if(km<=10)return 1; if(km<=20)return 2; if(km<=30)return 3; if(km<=40)return 4; if(km<=50)return 5; return 6; }
     window.toggleAbsence = function(i) { const c = document.getElementById(`absentSwitch_${i}`).checked; document.getElementById(`absentBlock_${i}`).classList.toggle('hidden', !c); document.getElementById(`workBlock_${i}`).classList.toggle('hidden', c); };
-    window.copyPrevious = function(i) { const p = document.querySelectorAll('.card-day')[i-1]; const c = document.querySelectorAll('.card-day')[i]; if(document.getElementById(`absentSwitch_${i-1}`).checked) return; c.querySelector('[name="chantier"]').value = p.querySelector('[name="chantier"]').value; c.querySelector('[name="start"]').value = p.querySelector('[name="start"]').value; c.querySelector('[name="end"]').value = p.querySelector('[name="end"]').value; c.querySelector('[name="lunch_start"]').value = p.querySelector('[name="lunch_start"]').value; c.querySelector('[name="lunch_end"]').value = p.querySelector('[name="lunch_end"]').value; c.querySelector('[name="meal"]').value = p.querySelector('[name="meal"]').value; if(p.querySelector('[name="zone"]').value){ c.querySelector('[name="zone"]').value = p.querySelector('[name="zone"]').value; c.querySelector('[name="address_gps"]').value = p.querySelector('[name="address_gps"]').value; c.querySelector('.zone-text').innerHTML = p.querySelector('.zone-text').innerHTML; c.querySelector('.btn-map').classList.add('border-success'); c.querySelector('.btn-map').style.color = "#198754"; } };
+    window.copyPrevious = function(i) { const p = document.querySelectorAll('.card-day')[i-1]; const c = document.querySelectorAll('.card-day')[i]; if(document.getElementById(`absentSwitch_${i-1}`).checked) return; c.querySelector('[name="chantier"]').value = p.querySelector('[name="chantier"]').value; c.querySelector('[name="start"]').value = p.querySelector('[name="start"]').value; c.querySelector('[name="end"]').value = p.querySelector('[name="end"]').value; c.querySelector('[name="lunch_start"]').value = p.querySelector('[name="lunch_start"]').value; c.querySelector('[name="lunch_end"]').value = p.querySelector('[name="lunch_end"]').value; c.querySelector('[name="meal"]').value = p.querySelector('[name="meal"]').value; if(p.querySelector('[name="zone"]').value){ c.querySelector('[name="zone"]').value = p.querySelector('[name="zone"]').value; c.querySelector('[name="address_gps"]').value = p.querySelector('[name="address_gps"]').value; c.querySelector('[name="lat"]').value = p.querySelector('[name="lat"]').value; c.querySelector('[name="lng"]').value = p.querySelector('[name="lng"]').value; c.querySelector('.zone-text').innerHTML = p.querySelector('.zone-text').innerHTML; c.querySelector('.btn-map').classList.add('border-success'); c.querySelector('.btn-map').style.color = "#198754"; } };
     function locateUser() { if (!navigator.geolocation) { alert("Pas de GPS"); return; } navigator.geolocation.getCurrentPosition((p) => { map.setView([p.coords.latitude, p.coords.longitude], 15); updateMarker({lat: p.coords.latitude, lng: p.coords.longitude}); }, () => alert("Erreur GPS")); }
     function openMap(index) { currentDayIndexForMap = index; const modal = new bootstrap.Modal(document.getElementById('mapModal')); modal.show(); setTimeout(() => { if(!map) initMap(); else map.invalidateSize(); }, 500); }
 
-    // --- LOGIQUE ENVOI SERVEUR ---
-    async function processPDF(action) {
+    // ============================================================
+    // 📩 FONCTION ENVOI (EMAIL + DOWNLOAD PDF)
+    // ============================================================
+    function sendEmail() {
+        const worker = document.getElementById('workerName').value;
+        const week = document.getElementById('weekStart').value;
+        if(!worker || !week) { alert("Remplissez Nom et Date !"); return; }
+        if(!hasSigned) { alert("Signez avant d'envoyer."); document.querySelector('.signature-container').scrollIntoView(); return; }
+
+        const btn = document.getElementById('btnSubmit');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...'; btn.disabled = true;
+
+        // 1. Construction du Tableau HTML pour l'Email
+        let html = `<table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse; font-family:Arial, sans-serif; font-size:13px;">
+            <tr style="background:#eee;"><th>Jour</th><th>Chantier</th><th>H.Début</th><th>H.Fin</th><th>Repas</th><th>Zone</th><th>Adresse</th></tr>`;
+        
+        document.querySelectorAll('.card-day').forEach((block, index) => {
+            const d = block.dataset.day;
+            if(document.getElementById(`absentSwitch_${index}`).checked) {
+                html += `<tr><td><b>${d}</b></td><td colspan="6" style="background:#ffe6e6;color:red;"><b>ABSENT : ${document.getElementById(`absentReason_${index}`).value}</b></td></tr>`;
+            } else if(block.querySelector('[name="chantier"]').value) {
+                let addr = block.querySelector('[name="address_gps"]').value;
+                let lat = block.querySelector('[name="lat"]').value;
+                let lng = block.querySelector('[name="lng"]').value;
+                let mapLink = (lat && lng) ? `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">📍 Voir carte</a>` : "";
+                
+                html += `<tr>
+                    <td><b>${d}</b></td>
+                    <td>${block.querySelector('[name="chantier"]').value}</td>
+                    <td>${block.querySelector('[name="start"]').value}</td>
+                    <td>${block.querySelector('[name="end"]').value}</td>
+                    <td>${block.querySelector('[name="meal"]').value}</td>
+                    <td>Z${block.querySelector('[name="zone"]').value}</td>
+                    <td>${addr}<br>${mapLink}</td>
+                </tr>`;
+            } else { html += `<tr><td>${d}</td><td colspan="6" style="color:#ccc;">-</td></tr>`; }
+        });
+        html += `</table>`;
+
+        // 2. Envoi via EmailJS
+        emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+            worker_name: worker,
+            week_date: week,
+            message_html: html,
+            signature_img: canvas.toDataURL('image/png'),
+            sign_date: new Date().toLocaleString('fr-FR')
+        })
+        .then(() => {
+            alert("✅ Email envoyé avec succès au bureau !");
+            btn.innerHTML = '<i class="fas fa-check"></i> Envoyé';
+        })
+        .catch((err) => {
+            alert("❌ Erreur envoi : " + JSON.stringify(err));
+            btn.innerHTML = 'Réessayer'; btn.disabled = false;
+        });
+    }
+
+    // Fonction Download PDF (Pour archive perso ouvrier)
+    function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const worker = document.getElementById('workerName').value;
         const week = document.getElementById('weekStart').value;
-        if(!worker || !week) { alert("Nom et Date manquants !"); return; }
-        if(action === 'email' && !hasSigned) { alert("✍️ Signez avant d'envoyer."); return; }
-
         const doc = new jsPDF({ orientation: 'landscape' });
-        doc.setFontSize(18); doc.text("RELEVÉ D'HEURES HEBDOMADAIRE", 14, 15);
-        doc.setFontSize(12); doc.text("Ouvrier : " + worker, 14, 25); doc.text("Semaine du : " + week, 14, 32);
-
+        doc.setFontSize(16); doc.text(`Relevé ${worker} - ${week}`, 14, 15);
         let rows = [];
         document.querySelectorAll('.card-day').forEach((block, index) => {
-            const isAbsent = document.getElementById(`absentSwitch_${index}`).checked;
-            const dayName = block.dataset.day;
-            if (isAbsent) {
-                rows.push([dayName, { content: 'ABSENCE : ' + document.getElementById(`absentReason_${index}`).value, colSpan: 9, styles: { fillColor: [255, 235, 235], textColor: [200, 0, 0], fontStyle: 'bold' } }]);
-            } else {
-                const ch = block.querySelector('[name="chantier"]').value;
-                if(ch) {
-                    rows.push([dayName, ch, block.querySelector('[name="start"]').value, block.querySelector('[name="end"]').value, block.querySelector('[name="lunch_start"]').value, block.querySelector('[name="lunch_end"]').value, block.querySelector('[name="meal"]').value, "Z" + (block.querySelector('[name="zone"]').value||"?"), document.querySelector(`input[name="driver_${index}"]:checked`).value, block.querySelector('[name="address_gps"]').value]);
-                } else { rows.push([dayName, "", "", "", "", "", "", "", "", ""]); }
-            }
+            let d = block.dataset.day;
+            if(document.getElementById(`absentSwitch_${index}`).checked) rows.push([d, 'ABSENT: '+document.getElementById(`absentReason_${index}`).value]);
+            else if(block.querySelector('[name="chantier"]').value) rows.push([d, block.querySelector('[name="chantier"]').value, block.querySelector('[name="start"]').value, block.querySelector('[name="end"]').value, block.querySelector('[name="meal"]').value, "Z"+block.querySelector('[name="zone"]').value, block.querySelector('[name="address_gps"]').value]);
         });
-
-        doc.autoTable({ head: [['Jour', 'Chantier', 'Deb.', 'Fin', 'P.Deb', 'P.Fin', 'Repas', 'Zone', 'Cond.', 'Localisation']], body: rows, startY: 40, theme: 'grid', styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [41, 128, 185] }, columnStyles: { 9: { cellWidth: 50 } } });
-
-        let finalY = doc.lastAutoTable.finalY + 10;
-        const now = new Date(); const timeString = now.toLocaleDateString('fr-FR') + " à " + now.toLocaleTimeString('fr-FR');
-        doc.setFontSize(10); doc.text("Certification :", 14, finalY);
-        doc.setFontSize(9); doc.setTextColor(100); doc.text("Signé le " + timeString, 14, finalY + 6);
-        if(hasSigned) { const sigData = canvas.toDataURL('image/png'); doc.addImage(sigData, 'PNG', 14, finalY + 10, 50, 25); }
-
-        if (action === 'preview') {
-            doc.save(`Apercu_${worker}.pdf`);
-        } else {
-            // ENVOI AU SERVEUR NAS
-            const btn = document.getElementById('btnSend');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi en cours...'; btn.disabled = true;
-
-            // Générer le PDF en Base64 string
-            const pdfBase64 = doc.output('datauristring');
-
-            fetch('envoi.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ worker: worker, week: week, pdf: pdfBase64 })
-            })
-            .then(response => {
-                if (response.ok) return response.text();
-                throw new Error('Erreur serveur');
-            })
-            .then(result => {
-                alert("✅ " + result);
-                btn.innerHTML = '<i class="fas fa-check"></i> Envoyé !';
-            })
-            .catch(error => {
-                console.error(error);
-                alert("❌ Erreur : Le mail n'est pas parti. Vérifiez que PHP est bien configuré sur le NAS.");
-                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Réessayer'; btn.disabled = false;
-            });
-        }
+        doc.autoTable({ head: [['Jour','Chantier','Deb','Fin','Repas','Zone','Adresse']], body: rows, startY: 25 });
+        if(hasSigned) doc.addImage(canvas.toDataURL('image/png'), 'PNG', 14, doc.lastAutoTable.finalY + 10, 50, 25);
+        doc.save(`Releve_${worker}_${week}.pdf`);
     }
-    
+
     document.getElementById('weekStart').valueAsDate = new Date();
 </script>
 </body>
